@@ -12,21 +12,11 @@ import (
 
 // from https://github.com/essentialbooks/books/blob/master/code/go/logging_http_requests/main.go
 func ExampleWrapHandler() {
-	mux := &http.ServeMux{}
-	mux.HandleFunc("/echo", handleIndex)
-	mux.HandleFunc("/json", handleJSON)
-
-	//httpSrv := &http.Server{
-	//	ReadTimeout:  120 * time.Second,
-	//	WriteTimeout: 120 * time.Second,
-	//	IdleTimeout:  120 * time.Second, // introduced in Go 1.8
-	//	Handler:     httplog.WrapHandler(mux),
-	//}
-	//
-	//httpSrv.Addr = ":8100"
-	//
-	//fmt.Println(httpSrv.Addr)
-	//httpSrv.ListenAndServe()
+	mux := httplog.NewMux()
+	mux.HandleFunc("/echo", handleIndex, httplog.Name("回显处理"))
+	mux.HandleFunc("/json", handleJSON, httplog.Name("JSON处理"))
+	mux.HandleFunc("/ignored", handleIgnore, httplog.Ignore())
+	mux.HandleFunc("/noname", handleNoname)
 
 	r, _ := http.NewRequest("GET", "/json", nil)
 	r.Header.Set("Content-Type", "application/json")
@@ -34,8 +24,7 @@ func ExampleWrapHandler() {
 	w := httptest.NewRecorder()
 	httplog.WrapHandler(mux).ServeHTTP(w, r)
 
-	fmt.Println(w.Code)
-	fmt.Println(w.Body.String())
+	fmt.Println(w.Code, w.Body.String())
 
 	r, _ = http.NewRequest("GET", "/echo", strings.NewReader(`{"name": "dingding"}`))
 	r.Header.Set("Content-Type", "application/json")
@@ -43,14 +32,25 @@ func ExampleWrapHandler() {
 	w = httptest.NewRecorder()
 	httplog.WrapHandler(mux).ServeHTTP(w, r)
 
-	fmt.Println(w.Code)
-	fmt.Println(w.Body.String())
+	fmt.Println(w.Code, w.Body.String())
+
+	r, _ = http.NewRequest("GET", "/ignored", nil)
+	w = httptest.NewRecorder()
+	httplog.WrapHandler(mux).ServeHTTP(w, r)
+
+	fmt.Println(w.Code, w.Body.String())
+
+	r, _ = http.NewRequest("GET", "/noname", nil)
+	w = httptest.NewRecorder()
+	httplog.WrapHandler(mux).ServeHTTP(w, r)
+
+	fmt.Println(w.Code, w.Body.String())
 
 	// Output:
-	// 202
-	// {"name": "bingoohuang"}
-	// 200
-	// {"name": "dingding"}
+	// 202 {"name": "bingoohuang"}
+	// 200 {"name": "dingding"}
+	// 200 Ignored
+	// 200 Noname
 }
 
 // simplest possible server that returns url as plain text.
@@ -59,8 +59,21 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK) // 200
 
+	attrs := httplog.ParseAttrs(r)
+	attrs["bytes"] = "xxx"
+
 	bytes, _ := ioutil.ReadAll(r.Body)
 	_, _ = w.Write(bytes)
+}
+
+func handleIgnore(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+
+	_, _ = w.Write([]byte("Ignored"))
+}
+
+func handleNoname(w http.ResponseWriter, r *http.Request) {
+	_, _ = w.Write([]byte("Noname"))
 }
 
 func handleJSON(w http.ResponseWriter, r *http.Request) {

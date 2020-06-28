@@ -45,14 +45,14 @@ func CaptureMetricsFn(w http.ResponseWriter, fn func(http.ResponseWriter)) Metri
 
 	fn(rec)
 
-	m.Duration = time.Since(m.Start)
 	m.End = time.Now()
+	m.Duration = m.End.Sub(m.Start)
 	m.Code = rec.Code
 
 	if rec.Body.Len() <= maxSize {
 		m.RespBody = rec.Body.String()
 	} else {
-		m.RespBody = string(rec.Body.Bytes()[:maxSize]) + "..."
+		m.RespBody = string(rec.Body.Bytes()[:maxSize-3]) + "..."
 	}
 
 	for k, v := range rec.Header() {
