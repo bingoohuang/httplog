@@ -46,6 +46,11 @@ type Store interface {
 // LogrusStore stores the log as logurs info.
 type LogrusStore struct{}
 
+// NewLogrusStore returns a new LogrusStore.
+func NewLogrusStore() *LogrusStore {
+	return &LogrusStore{}
+}
+
 // Store stores the log in database like MySQL, InfluxDB, and etc.
 func (s *LogrusStore) Store(log *Log) {
 	logrus.Infof("http:%+v\n", log)

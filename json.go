@@ -22,7 +22,7 @@ type JSON struct {
 	Data interface{}
 }
 
-// Render (JSON) writes data with custom ContentType.
+// Render (JSON) writes rowsData with custom ContentType.
 func (r JSON) Render(w http.ResponseWriter) error {
 	return WriteJSON(w, r.Data)
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func TestGin(t *testing.T) {
-	router := httplog.NewGin(gin.New(), &httplog.LogrusStore{})
+	router := httplog.NewGin(gin.New(), httplog.NewLogrusStore())
 
 	router.GET("/hello/:name", ctler.Hello, httplog.Name("你好"))
 	router.GET("/bypass/:name", ctler.Bypass, httplog.Ignore(true))

@@ -53,7 +53,7 @@ func PeekBody(r *http.Request, maxSize int) []byte {
 	}
 
 	buf := bufio.NewReader(r.Body)
-	// And now set a new body, which will simulate the same data we read:
+	// And now set a new body, which will simulate the same rowsData we read:
 	r.Body = ioutil.NopCloser(buf)
 
 	// https://www.alexedwards.net/blog/how-to-properly-parse-a-json-request-body

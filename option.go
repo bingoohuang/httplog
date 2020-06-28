@@ -14,6 +14,7 @@ func (ho optionsResponseWriter) WriteHeader(int)           {}
 // Option defines the option for the handler in the httplog.
 type Option struct {
 	Name   string
+	Table  string
 	Ignore bool
 }
 
@@ -56,6 +57,9 @@ type OptionFn func(option *Option)
 
 // Name defines the descriptive name of the handler.
 func Name(name string) OptionFn { return func(option *Option) { option.Name = name } }
+
+// Table defines the table to saving log.
+func Table(name string) OptionFn { return func(option *Option) { option.Table = name } }
 
 // Ignore tells the current handler should to be ignored for httplog.
 func Ignore(ignore bool) OptionFn {
