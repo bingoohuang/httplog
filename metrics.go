@@ -25,6 +25,7 @@ type Metrics struct {
 	// the size of the response body.
 	Written  int64
 	RespBody string
+	Header   http.Header
 }
 
 // CaptureMetrics wraps the given hnd, executes it with the given w and r, and
@@ -61,6 +62,7 @@ func CaptureMetricsFn(w http.ResponseWriter, fn func(http.ResponseWriter)) Metri
 
 	w.WriteHeader(rec.Code)
 	m.Written, _ = rec.Body.WriteTo(w)
+	m.Header = rec.Header()
 
 	return m
 }
