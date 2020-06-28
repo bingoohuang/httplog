@@ -11,18 +11,18 @@ import (
 )
 
 // from https://github.com/essentialbooks/books/blob/master/code/go/logging_http_requests/main.go
-func ExampleWrapHandler() {
-	mux := httplog.NewMux()
+func ExampleNewServeMux() {
+	mux := httplog.NewMux(http.NewServeMux())
 	mux.HandleFunc("/echo", handleIndex, httplog.Name("回显处理"))
 	mux.HandleFunc("/json", handleJSON, httplog.Name("JSON处理"))
-	mux.HandleFunc("/ignored", handleIgnore, httplog.Ignore())
+	mux.HandleFunc("/ignored", handleIgnore, httplog.Ignore(true))
 	mux.HandleFunc("/noname", handleNoname)
 
 	r, _ := http.NewRequest("GET", "/json", nil)
 	r.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
-	httplog.WrapHandler(mux).ServeHTTP(w, r)
+	mux.ServeHTTP(w, r)
 
 	fmt.Println(w.Code, w.Body.String())
 
@@ -30,19 +30,19 @@ func ExampleWrapHandler() {
 	r.Header.Set("Content-Type", "application/json")
 
 	w = httptest.NewRecorder()
-	httplog.WrapHandler(mux).ServeHTTP(w, r)
+	mux.ServeHTTP(w, r)
 
 	fmt.Println(w.Code, w.Body.String())
 
 	r, _ = http.NewRequest("GET", "/ignored", nil)
 	w = httptest.NewRecorder()
-	httplog.WrapHandler(mux).ServeHTTP(w, r)
+	mux.ServeHTTP(w, r)
 
 	fmt.Println(w.Code, w.Body.String())
 
 	r, _ = http.NewRequest("GET", "/noname", nil)
 	w = httptest.NewRecorder()
-	httplog.WrapHandler(mux).ServeHTTP(w, r)
+	mux.ServeHTTP(w, r)
 
 	fmt.Println(w.Code, w.Body.String())
 

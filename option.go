@@ -5,7 +5,7 @@ import "net/http"
 // OptionFns defines the slice of OptionFns.
 type OptionFns []OptionFn
 
-type optionsResponseWriter struct{ options OptionFns }
+type optionsResponseWriter struct{ option *Option }
 
 func (ho optionsResponseWriter) Header() http.Header       { return http.Header{} }
 func (ho optionsResponseWriter) Write([]byte) (int, error) { return 0, nil }
@@ -18,14 +18,17 @@ type Option struct {
 }
 
 func parseOption(r *http.Request, h http.Handler) *Option {
-	if mux, ok := h.(*Mux); ok {
-		kw := &optionsResponseWriter{}
-		mux.router.ServeHTTP(kw, r)
+	mux, ok := h.(*Mux)
 
-		return kw.options.CreateOption()
+	if !ok {
+		return &Option{Ignore: true}
 	}
 
-	return &Option{Ignore: true}
+	kw := &optionsResponseWriter{}
+
+	mux.router.ServeHTTP(kw, r)
+
+	return kw.option
 }
 
 // GetName returns the name from the option.
@@ -55,4 +58,8 @@ type OptionFn func(option *Option)
 func Name(name string) OptionFn { return func(option *Option) { option.Name = name } }
 
 // Ignore tells the current handler should to be ignored for httplog.
-func Ignore() OptionFn { return func(option *Option) { option.Ignore = true } }
+func Ignore(ignore bool) OptionFn {
+	return func(option *Option) {
+		option.Ignore = ignore
+	}
+}

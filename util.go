@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"time"
 )
 
 // IPAddrFromRemoteAddr parses the IP Address.
@@ -68,20 +67,4 @@ func PeekBody(r *http.Request, maxSize int) []byte {
 	peek, _ := buf.Peek(maxSize)
 
 	return peek
-}
-
-// WrapServer wraps a http server with log http wrapped handler.
-func WrapServer(h http.Handler) *http.Server {
-	// nolint:gomnd
-	srv := &http.Server{
-		ReadTimeout:  120 * time.Second,
-		WriteTimeout: 120 * time.Second,
-		IdleTimeout:  120 * time.Second, // introduced in Go 1.8
-		Handler:      WrapHandler(h),
-	}
-
-	//srv.Addr = ":8100"
-	//srv.ListenAndServe()
-
-	return srv
 }
