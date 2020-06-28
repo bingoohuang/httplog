@@ -43,8 +43,8 @@ func GetRemoteAddress(r *http.Request) string {
 }
 
 // IsWsRequest return true if this request is a websocket request.
-func IsWsRequest(r *http.Request) bool {
-	return strings.HasPrefix(r.URL.Path, "/ws/")
+func IsWsRequest(url string) bool {
+	return strings.HasPrefix(url, "/ws/")
 }
 
 // PeekBody peeks the maxSize body from the request limit to maxSize bytes.
