@@ -18,20 +18,27 @@ func BenchmarkCaptureMetrics(b *testing.B) {
 
 func benchmark(b *testing.B, captureMetrics bool) {
 	b.StopTimer()
+
 	dummyH := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 	h := dummyH
+
 	if captureMetrics {
 		h = func(w http.ResponseWriter, r *http.Request) {
 			httplog.CaptureMetrics(dummyH, w, r)
 		}
 	}
+
 	s := httptest.NewServer(h)
 	defer s.Close()
+
 	b.StartTimer()
+
 	for i := 0; i < b.N; i++ {
-		_, err := http.Get(s.URL)
+		bodyclose, err := http.Get(s.URL)
 		if err != nil {
 			b.Fatal(err)
 		}
+
+		bodyclose.Body.Close()
 	}
 }

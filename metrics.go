@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const maxSize = 1000
+
 // Metrics holds metrics captured from CaptureMetrics.
 type Metrics struct {
 	// Code is the first http response code passed to the WriteHeader func of
@@ -13,12 +15,13 @@ type Metrics struct {
 	// assumed instead.
 	Code  int
 	Start time.Time
+	End   time.Time
 	// Duration is the time it took to execute the handler.
 	Duration time.Duration
 	// Written is the number of bytes successfully written by the Write or
 	// ReadFrom function of the ResponseWriter. ResponseWriters may also write
-	// data to their underlaying connection directly (e.g. headers), but those
-	// are not tracked. Therefor the number of Written bytes will usually match
+	// data to their underlying connection directly (e.g. headers), but those
+	// are not tracked. Therefore the number of Written bytes will usually match
 	// the size of the response body.
 	Written  int64
 	RespBody string
@@ -38,18 +41,25 @@ func CaptureMetrics(hnd http.Handler, w http.ResponseWriter, r *http.Request) Me
 // application doesn't use the Go http.Handler interface.
 func CaptureMetricsFn(w http.ResponseWriter, fn func(http.ResponseWriter)) Metrics {
 	m := Metrics{Start: time.Now()}
-
 	rec := httptest.NewRecorder()
 
 	fn(rec)
 
 	m.Duration = time.Since(m.Start)
+	m.End = time.Now()
 	m.Code = rec.Code
 
-	if m.Written <= 300 {
+	if rec.Body.Len() <= maxSize {
 		m.RespBody = rec.Body.String()
+	} else {
+		m.RespBody = string(rec.Body.Bytes()[:maxSize]) + "..."
 	}
 
+	for k, v := range rec.Header() {
+		w.Header()[k] = v
+	}
+
+	w.WriteHeader(rec.Code)
 	m.Written, _ = rec.Body.WriteTo(w)
 
 	return m

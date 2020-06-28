@@ -13,9 +13,10 @@ import (
 	"github.com/bingoohuang/httplog"
 )
 
+// nolint:funlen
 func TestCaptureMetrics(t *testing.T) {
 	// Some of the edge cases tested below cause the net/http pkg to log some
-	// messages that add a lot of noise to the `go test -v` output, so we discard
+	// messages that add a lot of noise to the `go tc -v` output, so we discard
 	// the log here.
 	log.SetOutput(ioutil.Discard)
 	defer log.SetOutput(os.Stderr)
@@ -35,8 +36,8 @@ func TestCaptureMetrics(t *testing.T) {
 			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte("foo"))
-				w.Write([]byte("bar"))
+				_, _ = w.Write([]byte("foo"))
+				_, _ = w.Write([]byte("bar"))
 				time.Sleep(25 * time.Millisecond)
 			}),
 			WantCode:     http.StatusBadRequest,
@@ -45,7 +46,7 @@ func TestCaptureMetrics(t *testing.T) {
 		},
 		{
 			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte("foo"))
+				_, _ = w.Write([]byte("foo"))
 				w.WriteHeader(http.StatusNotFound)
 			}),
 			WantCode: http.StatusOK,
@@ -58,29 +59,39 @@ func TestCaptureMetrics(t *testing.T) {
 		},
 	}
 
-	for i, test := range tests {
+	for i, tc := range tests {
+		tc := tc
+
 		func() {
 			ch := make(chan httplog.Metrics, 1)
 			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				ch <- httplog.CaptureMetrics(test.Handler, w, r)
+				ch <- httplog.CaptureMetrics(tc.Handler, w, r)
 			})
 			s := httptest.NewServer(h)
+
 			defer s.Close()
+
 			res, err := http.Get(s.URL)
-			if !errContains(err, test.WantErr) {
-				t.Errorf("test %d: got=%s want=%s", i, err, test.WantErr)
+
+			if !errContains(err, tc.WantErr) {
+				t.Errorf("tc %d: got=%s want=%s", i, err, tc.WantErr)
 			}
+
 			if err != nil {
 				return
 			}
+
 			defer res.Body.Close()
+
 			m := <-ch
-			if m.Code != test.WantCode {
-				t.Errorf("test %d: got=%d want=%d", i, m.Code, test.WantCode)
-			} else if m.Duration < test.WantDuration {
-				t.Errorf("test %d: got=%s want=%s", i, m.Duration, test.WantDuration)
-			} else if m.Written < test.WantWritten {
-				t.Errorf("test %d: got=%d want=%d", i, m.Written, test.WantWritten)
+
+			switch {
+			case m.Code != tc.WantCode:
+				t.Errorf("tc %d: got=%d want=%d", i, m.Code, tc.WantCode)
+			case m.Duration < tc.WantDuration:
+				t.Errorf("tc %d: got=%s want=%s", i, m.Duration, tc.WantDuration)
+			case m.Written < tc.WantWritten:
+				t.Errorf("tc %d: got=%d want=%d", i, m.Written, tc.WantWritten)
 			}
 		}()
 	}
@@ -93,5 +104,6 @@ func errContains(err error, s string) bool {
 	} else {
 		errS = err.Error()
 	}
+
 	return strings.Contains(errS, s)
 }
