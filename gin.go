@@ -9,10 +9,10 @@ import (
 )
 
 // NewGin wraps a new GinRouter for the gin router.
-func NewGin(router gin.IRouter) *GinRouter {
+func NewGin(router gin.IRouter, store Store) *GinRouter {
 	r := &GinRouter{
 		IRouter: router,
-		Mux:     NewMux(router.(http.Handler)),
+		Mux:     NewMux(router.(http.Handler), store),
 	}
 	fn := func(method string) RouterFn {
 		return func(relativePath string, handler gin.HandlerFunc, options ...OptionFn) *GinRouter {

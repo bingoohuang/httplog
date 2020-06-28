@@ -9,7 +9,7 @@ import (
 )
 
 func TestGin(t *testing.T) {
-	router := httplog.NewGin(gin.New())
+	router := httplog.NewGin(gin.New(), &httplog.LogrusStore{})
 
 	router.GET("/hello/:name", ctler.Hello, httplog.Name("你好"))
 	router.GET("/bypass/:name", ctler.Bypass, httplog.Ignore(true))
@@ -41,7 +41,7 @@ var (
 )
 
 func TestCtrler(t *testing.T) {
-	router := httplog.NewGin(gin.New())
+	router := httplog.NewGin(gin.New(), &httplog.LogrusStore{})
 	router.RegisterCtler(ctler)
 
 	rr := httplog.PerformRequest("GET", "/hello/bingoo", router)

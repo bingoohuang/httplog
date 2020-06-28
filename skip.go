@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-func skipLoggingBefore(ri *Req, option *Option) bool {
+func skipLoggingBefore(ri *Log, option *Option) bool {
 	switch {
 	case IsWsRequest(ri.URL):
 		return true

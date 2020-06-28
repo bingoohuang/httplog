@@ -3,10 +3,12 @@ package httplog
 import (
 	"net/http"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
-// Req describes info about HTTP request.
-type Req struct {
+// Log describes info about HTTP request.
+type Log struct {
 	HandlerName string
 
 	// Method is GET etc.
@@ -33,4 +35,18 @@ type Req struct {
 	// Duration means how long did it take to.
 	Duration time.Duration
 	Attrs    Attrs
+}
+
+// Store defines the interface to Store a log.
+type Store interface {
+	// Store stores the log in database like MySQL, InfluxDB, and etc.
+	Store(log *Log)
+}
+
+// LogrusStore stores the log as logurs info.
+type LogrusStore struct{}
+
+// Store stores the log in database like MySQL, InfluxDB, and etc.
+func (s *LogrusStore) Store(log *Log) {
+	logrus.Infof("http:%+v\n", log)
 }

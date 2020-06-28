@@ -12,7 +12,7 @@ import (
 
 // from https://github.com/essentialbooks/books/blob/master/code/go/logging_http_requests/main.go
 func ExampleNewServeMux() {
-	mux := httplog.NewMux(http.NewServeMux())
+	mux := httplog.NewMux(http.NewServeMux(), &httplog.LogrusStore{})
 	mux.HandleFunc("/echo", handleIndex, httplog.Name("回显处理"))
 	mux.HandleFunc("/json", handleJSON, httplog.Name("JSON处理"))
 	mux.HandleFunc("/ignored", handleIgnore, httplog.Ignore(true))

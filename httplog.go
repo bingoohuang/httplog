@@ -3,8 +3,6 @@ package httplog
 import (
 	"net/http"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -12,13 +10,14 @@ import (
 type Mux struct {
 	handler http.Handler
 	router  *httprouter.Router
+	store   Store
 }
 
 // ServeHTTP calls f(w, r).
 func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	option := parseOption(r, mux)
 
-	ri := &Req{
+	l := &Log{
 		HandlerName: option.GetName(),
 		Method:      r.Method,
 		URL:         r.URL.String(),
@@ -26,27 +25,29 @@ func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ReqHeader: r.Header,
 	}
 
-	if skipLoggingBefore(ri, option) {
+	if skipLoggingBefore(l, option) {
 		mux.handler.ServeHTTP(w, r)
 		return
 	}
 
-	ri.IPAddr = GetRemoteAddress(r)
-	ri.ReqBody = string(PeekBody(r, maxSize))
+	l.IPAddr = GetRemoteAddress(r)
+	l.ReqBody = string(PeekBody(r, maxSize))
 
-	newCtx, ctxVar := createCtx(r, ri)
+	newCtx, ctxVar := createCtx(r, l)
 	m := CaptureMetrics(mux.handler, w, r.WithContext(newCtx))
 
-	ri.RespCode = m.Code
-	ri.RespBody = m.RespBody
-	ri.RespSize = m.Written
-	ri.Start = m.Start
-	ri.End = m.End
-	ri.Duration = m.Duration
-	ri.RespHeader = m.Header
-	ri.Attrs = ctxVar.Attrs
+	l.RespCode = m.Code
+	l.RespBody = m.RespBody
+	l.RespSize = m.Written
+	l.Start = m.Start
+	l.End = m.End
+	l.Duration = m.Duration
+	l.RespHeader = m.Header
+	l.Attrs = ctxVar.Attrs
 
-	logrus.Infof("http:%+v\n", ri)
+	if mux.store != nil {
+		mux.store.Store(l)
+	}
 }
 
 // HandlerFuncAware declares interface which holds  the HandleFunc function.
@@ -56,10 +57,11 @@ type HandlerFuncAware interface {
 }
 
 // NewMux returns a new instance of Mux.
-func NewMux(handler http.Handler) *Mux {
+func NewMux(handler http.Handler, store Store) *Mux {
 	return &Mux{
 		router:  httprouter.New(),
 		handler: handler,
+		store:   store,
 	}
 }
 
