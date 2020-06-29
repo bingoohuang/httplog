@@ -69,6 +69,7 @@ router.Run(":8080")
 `httplog:"id"`|id| 日志记录ID
 `httplog:"created"`|created| 创建时间
 `httplog:"ip"` |ip|当前机器IP
+`httplog:"addr"` |addr|http客户端地址
 `httplog:"hostname"` |hostname|当前机器名称
 `httplog:"pid"` |pid|应用程序PID
 `httplog:"started"` |start|开始时间(yyyy-MM-dd HH:mm:ss.SSS)
