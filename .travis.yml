@@ -3,8 +3,8 @@ services:
 before_install:
   - docker pull mysql:5.7.29
   - docker run --name mysql -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root -v ${PWD}:/data mysql:5.7.29
-  - docker exec -it mysql /bin/bash -c "bash /data/testdata/waitmysql.sh"
   - docker exec -it mysql mysqladmin ping -uroot -proot --wait=30 --silent
+  - docker exec -it oracle /bin/bash /data/testdata/waitmysql.sh
   - docker exec -it mysql /bin/bash -c "mysql -u root -proot -s < /data/testdata/mysql.sql"
 
 language: go
