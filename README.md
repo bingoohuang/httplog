@@ -10,6 +10,10 @@ httplog golang version. see [java version](https://github.com/gobars/httplog)
 
 ## Usage
 
+### Import
+
+`go get github.com/bingoohuang/httplog`
+
 ### Standard http wrapper
 
 ```go
