@@ -14,7 +14,7 @@ type SQLStore struct {
 	DriverName string
 	LogTables  []string
 
-	TableCols map[string]tableSchema
+	TableCols map[string]*tableSchema
 }
 
 // NewSQLStore creates a new SQLStore.
@@ -22,14 +22,14 @@ func NewSQLStore(db *sql.DB, defaultLogTables ...string) *SQLStore {
 	s := &SQLStore{DB: db}
 	s.DriverName = LookupDriverName(db.Driver())
 	s.LogTables = defaultLogTables
-	s.TableCols = make(map[string]tableSchema)
+	s.TableCols = make(map[string]*tableSchema)
 
 	return s
 }
 
-func (s *SQLStore) loadTableSchema(tableName string) tableSchema {
+func (s *SQLStore) loadTableSchema(tableName string) (*tableSchema, error) {
 	if v, ok := s.TableCols[tableName]; ok {
-		return v
+		return v, nil
 	}
 
 	mapper := &StructMapper{
@@ -38,13 +38,18 @@ func (s *SQLStore) loadTableSchema(tableName string) tableSchema {
 
 	run := NewSQLRun(s.DB, mapper)
 
-	tableCols := run.DoQuery(`
+	result := run.DoQuery(`
 		 select column_name, column_comment, data_type, character_maximum_length max_length
 		 from information_schema.columns
 		 where table_schema = database()
-		 and table_name = ?`, -1, tableName).Rows.([]TableCol)
+		 and table_name = ?`, -1, tableName)
+	if result.Error != nil {
+		return nil, result.Error
+	}
 
-	v := tableSchema{
+	tableCols := result.Rows.([]TableCol)
+
+	v := &tableSchema{
 		Name: tableName,
 		Cols: tableCols,
 	}
@@ -53,7 +58,7 @@ func (s *SQLStore) loadTableSchema(tableName string) tableSchema {
 
 	s.TableCols[tableName] = v
 
-	return v
+	return v, nil
 }
 
 // TableCol defines the schema of a table.
@@ -74,7 +79,13 @@ func (s *SQLStore) Store(l *Log) {
 	}
 
 	for _, t := range tables {
-		s.loadTableSchema(t).log(s.DB, l)
+		schema, err := s.loadTableSchema(t)
+		if err != nil {
+			logrus.Errorf("failed to loadTableSchema for table %s, error: %v", t, err)
+			continue
+		}
+
+		schema.log(s.DB, l)
 	}
 }
 
@@ -97,7 +108,12 @@ func (t tableSchema) log(db MiniDB, l *Log) {
 
 	run := NewSQLExec(db)
 	result := run.DoUpdate(t.InsertSQL, params...)
-	logrus.Debugf("log result %+v", result)
+
+	if result.Error != nil {
+		logrus.Warnf("do update error: %v", result.Error)
+	} else {
+		logrus.Debugf("log result %+v", result)
+	}
 }
 
 func (t *tableSchema) createInsertSQL() {
