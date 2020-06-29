@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -22,7 +23,7 @@ func TestNewSQLStore(t *testing.T) {
 	mux := httplog.NewMux(http.NewServeMux(), store)
 	mux.HandleFunc("/echo", handleIndex, httplog.Biz("回显处理"), httplog.Tables("biz_log"))
 
-	r, _ := http.NewRequest("GET", "/echo", nil)
+	r, _ := http.NewRequest("GET", "/echo", strings.NewReader(`{"name":"dingding"}`))
 	r.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()

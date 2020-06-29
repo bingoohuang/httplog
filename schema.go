@@ -62,10 +62,10 @@ func jsonpath(expr, body string) string {
 	}
 
 	if len(nodes) == 1 {
-		return fmt.Sprintf("%+v", nodes[0])
+		return fmt.Sprintf("%v", nodes[0])
 	}
 
-	return fmt.Sprintf("%+v", nodes)
+	return fmt.Sprintf("%v", nodes)
 }
 
 // nolint:lll,gochecknoinits
