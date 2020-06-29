@@ -5,7 +5,7 @@ drop table if exists biz_log;
 create table biz_log
 (
     id          bigint primary key comment '日志记录ID',
-    created     datetime default current_timestamp comment '创建时间 httplog:"-"'
+    created     datetime default current_timestamp comment '创建时间 httplog:"-"',
     started     datetime comment '请求时间',
     end         datetime comment '结束时间',
     cost        int comment '费时毫秒',
