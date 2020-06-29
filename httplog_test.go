@@ -62,7 +62,14 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	attrs := httplog.ParseAttrs(r)
 	attrs["bytes"] = "xxx"
 
-	bytes, _ := ioutil.ReadAll(r.Body)
+	var bytes []byte
+
+	if r.Body != nil {
+		bytes, _ = ioutil.ReadAll(r.Body)
+	} else {
+		bytes = []byte(`empty request body`)
+	}
+
 	_, _ = w.Write(bytes)
 }
 

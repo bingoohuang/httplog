@@ -28,7 +28,7 @@ func ParseReq(r *http.Request) *Log {
 	return &Log{}
 }
 
-// Attrs carries map. It implements Value for that key and
+// Attrs carries map. It implements value for that key and
 // delegates all other calls to the embedded Context.
 type Attrs map[string]interface{}
 

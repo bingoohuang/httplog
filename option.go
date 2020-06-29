@@ -1,35 +1,48 @@
 package httplog
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/julienschmidt/httprouter"
+)
 
 // OptionFns defines the slice of OptionFns.
 type OptionFns []OptionFn
 
-type optionsResponseWriter struct{ option *Option }
+// OptionHolder defines the holder for option and params.
+type OptionHolder struct {
+	option *Option
+	params httprouter.Params
+}
 
-func (ho optionsResponseWriter) Header() http.Header       { return http.Header{} }
-func (ho optionsResponseWriter) Write([]byte) (int, error) { return 0, nil }
-func (ho optionsResponseWriter) WriteHeader(int)           {}
+// Header returns the header map that will be sent by WriteHeader.
+func (ho OptionHolder) Header() http.Header { return http.Header{} }
+
+// Write writes the data to the connection as part of an HTTP reply.
+func (ho OptionHolder) Write([]byte) (int, error) { return 0, nil }
+
+// WriteHeader sends an HTTP response header with the provided status code.
+func (ho OptionHolder) WriteHeader(int) {}
 
 // Option defines the option for the handler in the httplog.
 type Option struct {
 	Name   string
-	Table  string
+	Tables []string
 	Ignore bool
 }
 
-func parseOption(r *http.Request, h http.Handler) *Option {
+func parseOption(r *http.Request, h http.Handler) *OptionHolder {
 	mux, ok := h.(*Mux)
 
 	if !ok {
-		return &Option{Ignore: true}
+		return &OptionHolder{option: &Option{Ignore: true}}
 	}
 
-	kw := &optionsResponseWriter{}
+	kw := &OptionHolder{}
 
 	mux.router.ServeHTTP(kw, r)
 
-	return kw.option
+	return kw
 }
 
 // GetName returns the name from the option.
@@ -58,8 +71,8 @@ type OptionFn func(option *Option)
 // Name defines the descriptive name of the handler.
 func Name(name string) OptionFn { return func(option *Option) { option.Name = name } }
 
-// Table defines the table to saving log.
-func Table(name string) OptionFn { return func(option *Option) { option.Table = name } }
+// Tables defines the tables to saving log.
+func Tables(names ...string) OptionFn { return func(option *Option) { option.Tables = names } }
 
 // Ignore tells the current handler should to be ignored for httplog.
 func Ignore(ignore bool) OptionFn {

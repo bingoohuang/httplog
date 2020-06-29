@@ -4,11 +4,11 @@ import (
 	"strings"
 )
 
-func skipLoggingBefore(ri *Log, option *Option) bool {
+func (ri *Log) skipLoggingBefore() bool {
 	switch {
 	case IsWsRequest(ri.URL):
 		return true
-	case option.Ignore:
+	case ri.Option.Ignore:
 		return true
 	case ri.URL == "/favicon.png" || ri.URL == "/favicon.ico":
 		return true

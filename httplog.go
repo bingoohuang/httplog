@@ -2,7 +2,9 @@ package httplog
 
 import (
 	"net/http"
+	"time"
 
+	"github.com/bingoohuang/snow"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -15,17 +17,19 @@ type Mux struct {
 
 // ServeHTTP calls f(w, r).
 func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	option := parseOption(r, mux)
+	l := &Log{Created: time.Now()}
+	holder := parseOption(r, mux)
+	l.Option = holder.option
+	l.PathParams = holder.params
 
-	l := &Log{
-		HandlerName: option.GetName(),
-		Method:      r.Method,
-		URL:         r.URL.String(),
+	l.ID = snow.Next().String()
+	l.Biz = l.Option.GetName()
+	l.Method = r.Method
+	l.URL = r.URL.String()
+	l.ReqHeader = r.Header
+	l.Request = r
 
-		ReqHeader: r.Header,
-	}
-
-	if skipLoggingBefore(l, option) {
+	if l.skipLoggingBefore() {
 		mux.handler.ServeHTTP(w, r)
 		return
 	}
@@ -36,13 +40,13 @@ func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	newCtx, ctxVar := createCtx(r, l)
 	m := CaptureMetrics(mux.handler, w, r.WithContext(newCtx))
 
-	l.RespCode = m.Code
-	l.RespBody = m.RespBody
+	l.RspStatus = m.Code
+	l.RspBody = m.RespBody
 	l.RespSize = m.Written
 	l.Start = m.Start
 	l.End = m.End
 	l.Duration = m.Duration
-	l.RespHeader = m.Header
+	l.RspHeader = m.Header
 	l.Attrs = ctxVar.Attrs
 
 	if mux.store != nil {
@@ -96,18 +100,21 @@ var (
 func (mux *Mux) registerRouter(method, pattern string, options []OptionFn) {
 	option := (OptionFns(options)).CreateOption()
 	f := func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		if ww, ok := w.(*optionsResponseWriter); ok {
+		if ww, ok := w.(*OptionHolder); ok {
 			ww.option = option
+			ww.params = p
 		}
 	}
 
-	if method != AnyMethod {
-		mux.router.Handle(method, pattern, f)
-
-		return
-	}
-
-	for _, m := range AllHTTPMethods {
+	for _, m := range createMethods(method) {
 		mux.router.Handle(m, pattern, f)
 	}
+}
+
+func createMethods(method string) []string {
+	if method == AnyMethod {
+		return AllHTTPMethods
+	}
+
+	return []string{method}
 }

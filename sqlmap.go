@@ -8,29 +8,30 @@ import (
 	"github.com/bingoohuang/strcase"
 )
 
-type SelectItem interface {
+type selectItem interface {
 	Type() reflect.Type
-	Set(val reflect.Value)
-	ResetParent(parent reflect.Value)
+	SetField(val reflect.Value)
+	SetRoot(root reflect.Value)
 }
 
-type StructItem struct {
-	*reflect.StructField
-	parent reflect.Value
+type structItem struct {
+	field *reflect.StructField
+	root  reflect.Value
 }
 
-func (s *StructItem) Type() reflect.Type               { return s.StructField.Type }
-func (s *StructItem) ResetParent(parent reflect.Value) { s.parent = parent }
-func (s *StructItem) Set(val reflect.Value) {
-	f := s.parent.FieldByName(s.StructField.Name)
-	f.Set(val.Convert(f.Type()))
+func (s *structItem) Type() reflect.Type         { return s.field.Type }
+func (s *structItem) SetRoot(root reflect.Value) { s.root = root }
+func (s *structItem) SetField(val reflect.Value) {
+	s.root.FieldByIndex(s.field.Index).Set(val.Convert(s.field.Type))
 }
 
+// Mapping defines the interface for SQL query processing.
 type Mapping interface {
 	Scan() error
 	RowsData() interface{}
 }
 
+// MapMapping maps the query rows to maps.
 type MapMapping struct {
 	columnSize  int
 	nullReplace string
@@ -40,10 +41,10 @@ type MapMapping struct {
 	rowsData    [][]string
 }
 
-func (m *MapMapping) RowsData() interface{} {
-	return m.rowsData
-}
+// RowsData returns the mapped rows data.
+func (m *MapMapping) RowsData() interface{} { return m.rowsData }
 
+// Scan scans the rows one by one.
 func (m *MapMapping) Scan() error {
 	holders := make([]sql.NullString, m.columnSize)
 	pointers := make([]interface{}, m.columnSize)
@@ -59,10 +60,10 @@ func (m *MapMapping) Scan() error {
 
 	values := make([]string, m.columnSize)
 
-	for i, v := range holders {
-		values[i] = IfElse(v.Valid, v.String, m.nullReplace)
+	for i, h := range holders {
+		values[i] = IfElse(h.Valid, h.String, m.nullReplace)
 
-		if m.columnLobs[i] && v.Valid {
+		if h.Valid && m.columnLobs[i] {
 			values[i] = "(" + m.columnTypes[i].DatabaseTypeName() + ")"
 		}
 	}
@@ -72,26 +73,31 @@ func (m *MapMapping) Scan() error {
 	return nil
 }
 
-type Mapper interface {
+// Preparer prepares to scan query rows.
+type Preparer interface {
+	// Prepare prepares to scan query rows.
 	Prepare(rows *sql.Rows, columns []string) Mapping
 }
 
-type MapMapper struct {
-	nullReplace string
+// MapPreparer prepares to scan query rows.
+type MapPreparer struct {
+	// NullReplace is the replacement of null values.
+	NullReplace string
 }
 
-func (m *MapMapper) Prepare(rows *sql.Rows, columns []string) Mapping {
+// Prepare prepares to scan query rows.
+func (m *MapPreparer) Prepare(rows *sql.Rows, columns []string) Mapping {
 	columnSize := len(columns)
 	columnTypes, _ := rows.ColumnTypes()
 	columnLobs := make([]bool, columnSize)
 
-	for i := 0; i < len(columnTypes); i++ {
-		columnLobs[i] = ContainsIgnoreCase(columnTypes[i].DatabaseTypeName(), "LOB")
+	for i := 0; i < columnSize; i++ {
+		columnLobs[i] = ContainsFold(columnTypes[i].DatabaseTypeName(), "LOB")
 	}
 
 	return &MapMapping{
 		columnSize:  columnSize,
-		nullReplace: m.nullReplace,
+		nullReplace: m.NullReplace,
 		columnTypes: columnTypes,
 		columnLobs:  columnLobs,
 		rows:        rows,
@@ -99,17 +105,20 @@ func (m *MapMapper) Prepare(rows *sql.Rows, columns []string) Mapping {
 	}
 }
 
+// StructMapper is the the structure to create struct mapping.
 type StructMapper struct {
 	StructType reflect.Type
 }
 
+// StructMapping is the structure for mapping row to a structure.
 type StructMapping struct {
-	mapFields SelectItemSlice
+	mapFields selectItemSlice
 	*StructMapper
 	rows     *sql.Rows
-	rowsData []interface{}
+	rowsData reflect.Value
 }
 
+// Scan scans the query result to fetch the rows one by one.
 func (s *StructMapping) Scan() error {
 	pointers, structPtr := s.mapFields.ResetDestinations(s.StructMapper)
 
@@ -120,38 +129,36 @@ func (s *StructMapping) Scan() error {
 
 	for i, field := range s.mapFields {
 		if p, ok := pointers[i].(*NullAny); ok {
-			field.Set(p.getVal())
+			field.SetField(p.getVal())
 		} else {
-			field.Set(reflect.ValueOf(pointers[i]).Elem())
+			field.SetField(reflect.ValueOf(pointers[i]).Elem())
 		}
 	}
 
-	s.rowsData = append(s.rowsData, structPtr.Elem().Interface())
+	s.rowsData = reflect.Append(s.rowsData, structPtr.Elem())
 
 	return nil
 }
 
-func (s *StructMapping) RowsData() interface{} {
-	return s.rowsData
-}
+// RowsData returns the mapped rows data.
+func (s *StructMapping) RowsData() interface{} { return s.rowsData.Interface() }
 
+// Prepare prepares to scan query rows.
 func (m *StructMapper) Prepare(rows *sql.Rows, columns []string) Mapping {
-	mapping := &StructMapping{
+	return &StructMapping{
 		rows:         rows,
-		mapFields:    m.NewStructFields(columns),
+		mapFields:    m.newStructFields(columns),
 		StructMapper: m,
-		rowsData:     make([]interface{}, 0),
+		rowsData:     reflect.MakeSlice(reflect.SliceOf(m.StructType), 0, 0),
 	}
-
-	return mapping
 }
 
-func (mapFields SelectItemSlice) ResetDestinations(mapper *StructMapper) ([]interface{}, reflect.Value) {
+func (mapFields selectItemSlice) ResetDestinations(mapper *StructMapper) ([]interface{}, reflect.Value) {
 	pointers := make([]interface{}, len(mapFields))
 	structPtr := reflect.New(mapper.StructType)
 
 	for i, fv := range mapFields {
-		fv.ResetParent(structPtr)
+		fv.SetRoot(structPtr.Elem())
 
 		if ImplSQLScanner(fv.Type()) {
 			pointers[i] = reflect.New(fv.Type()).Interface()
@@ -189,26 +196,26 @@ var (
 // ImplSQLScanner tells t whether it implements sql.Scanner interface.
 func ImplSQLScanner(t reflect.Type) bool { return ImplType(t, _sqlScannerType) }
 
-type SelectItemSlice []SelectItem
+type selectItemSlice []selectItem
 
-// NewStructFields creates new struct fields slice.
-func (m *StructMapper) NewStructFields(columns []string) SelectItemSlice {
-	mapFields := make(SelectItemSlice, len(columns))
+// newStructFields creates new struct fields slice.
+func (m *StructMapper) newStructFields(columns []string) selectItemSlice {
+	mapFields := make(selectItemSlice, len(columns))
 	for i, col := range columns {
-		mapFields[i] = m.NewStructField(col)
+		mapFields[i] = m.newStructField(col)
 	}
 
 	return mapFields
 }
 
-// NewStructField creates a new struct field.
-func (m StructMapper) NewStructField(col string) SelectItem {
+// newStructField creates a new struct field.
+func (m StructMapper) newStructField(col string) selectItem {
 	fv, ok := m.StructType.FieldByNameFunc(func(field string) bool {
 		return m.matchesField2Col(field, col)
 	})
 
 	if ok {
-		return &StructItem{StructField: &fv}
+		return &structItem{field: &fv}
 	}
 
 	return nil
@@ -216,11 +223,13 @@ func (m StructMapper) NewStructField(col string) SelectItem {
 
 func (m StructMapper) matchesField2Col(field, col string) bool {
 	f, _ := m.StructType.FieldByName(field)
-	if tagName := f.Tag.Get("name"); tagName != "" {
-		return tagName == col
+	if v := f.Tag.Get("name"); v != "" && v != "-" {
+		return v == col
 	}
 
-	return strings.EqualFold(field, col) || strings.EqualFold(field, strcase.ToCamel(col))
+	eq := strings.EqualFold
+
+	return eq(field, col) || eq(field, strcase.ToCamel(col))
 }
 
 // IfElse if else ...
@@ -232,7 +241,7 @@ func IfElse(ifCondition bool, ifValue, elseValue string) string {
 	return elseValue
 }
 
-// ContainsIgnoreCase tell if a contains b in case-insensitively
-func ContainsIgnoreCase(a, b string) bool {
+// ContainsFold tell if a contains b in case-insensitively.
+func ContainsFold(a, b string) bool {
 	return strings.Contains(strings.ToUpper(a), strings.ToUpper(b))
 }

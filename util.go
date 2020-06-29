@@ -7,6 +7,25 @@ import (
 	"strings"
 )
 
+// At returns the element of index i in the slice s.
+func At(s []string, i int) string {
+	if i < len(s) {
+		return s[i]
+	}
+
+	return ""
+}
+
+// Abbreviate abbreviates a string using ellipses.
+func Abbreviate(str string, maxWidth int) string {
+	size := len(str)
+	if str == "" || maxWidth < 4 || size <= maxWidth {
+		return str
+	}
+
+	return str[:maxWidth-3] + ("...")
+}
+
 // IPAddrFromRemoteAddr parses the IP Address.
 // Request.RemoteAddress contains port, which we want to remove i.e.: "[::1]:58292" => "[::1]".
 func IPAddrFromRemoteAddr(s string) string {
