@@ -13,7 +13,7 @@ import (
 )
 
 func TestNewSQLStore(t *testing.T) {
-	DSN := `root:root@tcp(127.0.0.1:3306)/id?charset=utf8mb4&parseTime=true&loc=Local`
+	DSN := `root:root@tcp(127.0.0.1:3306)/httplog?charset=utf8mb4&parseTime=true&loc=Local`
 	db, err := sql.Open("mysql", DSN)
 	assert.Nil(t, err)
 
