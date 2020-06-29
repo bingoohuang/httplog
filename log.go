@@ -46,8 +46,8 @@ type Log struct {
 	Request    *http.Request
 }
 
-func (ri *Log) pathVar(name string) string {
-	for _, p := range ri.PathParams {
+func (l *Log) pathVar(name string) string {
+	for _, p := range l.PathParams {
 		if p.Key == name {
 			return p.Value
 		}
@@ -56,30 +56,30 @@ func (ri *Log) pathVar(name string) string {
 	return ""
 }
 
-func (ri *Log) pathVars() interface{} {
+func (l *Log) pathVars() interface{} {
 	m := make(map[string]string)
 
-	for _, p := range ri.PathParams {
+	for _, p := range l.PathParams {
 		m[p.Key] = p.Value
 	}
 
 	return m
 }
 
-func (ri *Log) queryVar(name string) string {
-	return At(ri.Request.URL.Query()[name], 0)
+func (l *Log) queryVar(name string) string {
+	return At(l.Request.URL.Query()[name], 0)
 }
 
-func (ri *Log) queryVars() string {
-	return ri.Request.URL.Query().Encode()
+func (l *Log) queryVars() string {
+	return l.Request.URL.Query().Encode()
 }
 
-func (ri *Log) paramVar(name string) string {
-	return At(ri.Request.Form[name], 0)
+func (l *Log) paramVar(name string) string {
+	return At(l.Request.Form[name], 0)
 }
 
-func (ri *Log) paramVars() string {
-	return ri.Request.Form.Encode()
+func (l *Log) paramVars() string {
+	return l.Request.Form.Encode()
 }
 
 // Store defines the interface to Store a log.

@@ -4,15 +4,17 @@ import (
 	"strings"
 )
 
-func (ri *Log) skipLoggingBefore() bool {
+func (l *Log) skipLoggingBefore(mux *Mux) bool {
 	switch {
-	case IsWsRequest(ri.URL):
+	case l.Biz == "Noname" && mux.muxOption.IgnoreBizNoname:
 		return true
-	case ri.Option.Ignore:
+	case IsWsRequest(l.URL):
 		return true
-	case ri.URL == "/favicon.png" || ri.URL == "/favicon.ico":
+	case l.Option.Ignore:
 		return true
-	case strings.HasSuffix(ri.URL, ".css"):
+	case l.URL == "/favicon.png" || l.URL == "/favicon.ico":
+		return true
+	case strings.HasSuffix(l.URL, ".css"):
 		return true
 	}
 

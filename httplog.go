@@ -5,35 +5,38 @@ import (
 	"time"
 
 	"github.com/bingoohuang/snow"
+
 	"github.com/julienschmidt/httprouter"
 )
 
 // Mux defines the wrapper of http.ServeMux.
 type Mux struct {
-	handler http.Handler
-	router  *httprouter.Router
-	store   Store
+	handler   http.Handler
+	router    *httprouter.Router
+	store     Store
+	muxOption *MuxOption
 }
 
 // ServeHTTP calls f(w, r).
 func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	l := &Log{Created: time.Now()}
 	holder := parseOption(r, mux)
+
 	l.Option = holder.option
 	l.PathParams = holder.params
-
-	l.ID = snow.Next().String()
 	l.Biz = l.Option.GetBiz()
+
 	l.Method = r.Method
 	l.URL = r.URL.String()
 	l.ReqHeader = r.Header
 	l.Request = r
 
-	if l.skipLoggingBefore() {
+	if l.skipLoggingBefore(mux) {
 		mux.handler.ServeHTTP(w, r)
 		return
 	}
 
+	l.ID = snow.Next().String()
 	l.IPAddr = GetRemoteAddress(r)
 	l.ReqBody = string(PeekBody(r, maxSize))
 
@@ -59,12 +62,34 @@ type HandlerFuncAware interface {
 	HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request))
 }
 
+// MuxOption defines the option of mux.
+type MuxOption struct {
+	IgnoreBizNoname bool
+}
+
+// MuxOptionFn defines the function prototype to seting MuxOption.
+type MuxOptionFn func(m *MuxOption)
+
+// IgnoreBizNoname set the ignoreBizNoname option.
+func IgnoreBizNoname(ignore bool) MuxOptionFn {
+	return func(m *MuxOption) {
+		m.IgnoreBizNoname = ignore
+	}
+}
+
 // NewMux returns a new instance of Mux.
-func NewMux(handler http.Handler, store Store) *Mux {
+func NewMux(handler http.Handler, store Store, muxOptions ...MuxOptionFn) *Mux {
+	muxOption := &MuxOption{}
+
+	for _, fn := range muxOptions {
+		fn(muxOption)
+	}
+
 	return &Mux{
-		router:  httprouter.New(),
-		handler: handler,
-		store:   store,
+		router:    httprouter.New(),
+		handler:   handler,
+		store:     store,
+		muxOption: muxOption,
 	}
 }
 
