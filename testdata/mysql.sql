@@ -15,6 +15,6 @@ create table biz_log
     biz         varchar(60) comment '当前业务名称',
     req_url     varchar(60) comment '请求url',
     req_method  varchar(60) comment '请求方法',
-    rsp_body    varchar(60) comment '响应体',
+    rsp_body    varchar(60) comment '响应体'
 ) engine = innodb
   default charset = utf8mb4 comment 'biz_log';
