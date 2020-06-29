@@ -100,6 +100,31 @@ router.Run(":8080")
 `httplog:"ctx_xxx"` |ctx_xxx|上下文对象xxx的值, 通过api设置: `httplog.PutAttr(r, "xxx", "yyy")`
 </details>
 
+### Ctrler examples
+
+```go
+type Ctrler struct {
+	Hello  gin.HandlerFunc `route:"GET /hello/:name" name:"你好"`
+	Bypass gin.HandlerFunc `route:"POST /bypass/:name" ignore:"true"`
+}
+
+func main) {
+	ctler := Ctrler{
+		Hello: func(context *gin.Context) {
+			context.String(200, "welcome "+context.Param("name"))
+		},
+		Bypass: func(context *gin.Context) {
+			context.String(200, "welcome "+context.Param("name"))
+		},
+	}
+
+	router := httplog.NewGin(gin.New(), &httplog.LogrusStore{})
+	router.RegisterCtler(ctler)
+    // 监听运行于 0.0.0.0:8080
+    router.Run(":8080")
+}
+```
+
 ## Scripts
 
 ```
