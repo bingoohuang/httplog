@@ -8,20 +8,32 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func loginFilter(c *gin.Context) {
+	httplog.PutAttr(c.Request, "username", "bingoohuang")
+	c.Next()
+}
+
 func TestGin(t *testing.T) {
 	router := httplog.NewGin(gin.New(), httplog.NewLogrusStore())
 
-	router.GET("/hello/:name", ctler.Hello, httplog.Biz("你好"))
-	router.GET("/bypass/:name", ctler.Bypass, httplog.Ignore(true))
+	router.Use(loginFilter)
+
+	group := router.Group("/group")
+
+	group.GET("/hello/:name", ctler.Hello, httplog.Biz("你好"))
+	group.GET("/bypass/:name", ctler.Bypass, httplog.Ignore(true))
 
 	// 监听运行于 0.0.0.0:8080
 	//router.Run(":8080")
 
-	rr := httplog.PerformRequest("GET", "/hello/bingoo", router)
+	//server := &http.Server{Addr: ":8080", Handler: router}
+	//server.ListenAndServe()
+
+	rr := httplog.PerformRequest("GET", "/group/hello/bingoo", router)
 	assert.Equal(t, 200, rr.Code)
 	assert.Equal(t, "welcome bingoo", rr.Body.String())
 
-	rr = httplog.PerformRequest("GET", "/bypass/bingoo", router)
+	rr = httplog.PerformRequest("GET", "/group/bypass/bingoo", router)
 	assert.Equal(t, 200, rr.Code)
 	assert.Equal(t, "welcome bingoo", rr.Body.String())
 }

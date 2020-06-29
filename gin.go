@@ -2,6 +2,8 @@ package httplog
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -34,6 +36,9 @@ func NewGin(router *gin.Engine, store Store) *GinRouter {
 // RouterFn defines the prototype for function gin Handle.
 type RouterFn func(relativePath string, handler gin.HandlerFunc, options ...OptionFn) *GinRouter
 
+// GinRouterGroupFn defines the prototype for function gin Handle group.
+type GinRouterGroupFn func(relativePath string, handler gin.HandlerFunc, options ...OptionFn) *GinRouterGroup
+
 // GinRouter defines adaptor routes implementation for IRoutes.
 type GinRouter struct {
 	*gin.Engine
@@ -41,6 +46,73 @@ type GinRouter struct {
 
 	// XXX is a shortcut for router.Handle("XXX", path, handle).
 	POST, GET, DELETE, PATCH, PUT, OPTIONS, HEAD RouterFn
+}
+
+// ServeHTTP calls f(w, r).
+func (r *GinRouter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.mux.ServeHTTP(w, req)
+}
+
+// Run attaches the router to a http.Server and starts listening and serving HTTP requests.
+// It is a shortcut for http.ListenAndServe(addr, router)
+// Note: this method will block the calling goroutine indefinitely unless an error happens.
+func (r *GinRouter) Run(addr ...string) (err error) {
+	address := resolveAddress(addr)
+	err = http.ListenAndServe(address, r.mux)
+
+	return
+}
+
+func resolveAddress(addr []string) string {
+	switch len(addr) {
+	case 0:
+		if port := os.Getenv("PORT"); port != "" {
+			return ":" + port
+		}
+
+		return ":8080"
+	case 1:
+		return addr[0]
+	default:
+		panic("too many parameters")
+	}
+}
+
+// GinRouterGroup wraps the gin.RouterGroup.
+type GinRouterGroup struct {
+	*gin.RouterGroup
+	GinRouter *GinRouter
+
+	// XXX is a shortcut for router.Handle("XXX", path, handle).
+	POST, GET, DELETE, PATCH, PUT, OPTIONS, HEAD GinRouterGroupFn
+}
+
+// Group creates a new router group. You should add all the routes that have common middlewares or the same path prefix.
+// For example, all the routes that use a common middleware for authorization could be grouped.
+func (r *GinRouter) Group(groupPath string, handlers ...gin.HandlerFunc) *GinRouterGroup {
+	g := &GinRouterGroup{
+		RouterGroup: r.Engine.Group(groupPath, handlers...),
+		GinRouter:   r,
+	}
+
+	fn := func(method string) GinRouterGroupFn {
+		return func(relativePath string, handler gin.HandlerFunc, options ...OptionFn) *GinRouterGroup {
+			g.Handle(method, relativePath, handler)
+			r.mux.registerRouter(method, filepath.Join(groupPath, relativePath), options)
+
+			return g
+		}
+	}
+
+	g.POST = fn(http.MethodPost)
+	g.GET = fn(http.MethodGet)
+	g.DELETE = fn(http.MethodDelete)
+	g.PATCH = fn(http.MethodPatch)
+	g.PUT = fn(http.MethodPut)
+	g.OPTIONS = fn(http.MethodOptions)
+	g.HEAD = fn(http.MethodHead)
+
+	return g
 }
 
 // Handle registers a new request handle and middleware with the given path and method.
