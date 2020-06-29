@@ -33,12 +33,11 @@ type Option struct {
 
 func parseOption(r *http.Request, h http.Handler) *OptionHolder {
 	mux, ok := h.(*Mux)
+	kw := &OptionHolder{option: &Option{Ignore: true}}
 
 	if !ok {
-		return &OptionHolder{option: &Option{Ignore: true}}
+		return kw
 	}
-
-	kw := &OptionHolder{}
 
 	mux.router.ServeHTTP(kw, r)
 

@@ -79,6 +79,7 @@ func init() {
 	blts[eq("end")] = colFn(func(l *Log) interface{} { return l.End })
 	blts[eq("cost")] = colFn(func(l *Log) interface{} { return l.Duration.Milliseconds() })
 	blts[eq("biz")] = colFn(func(l *Log) interface{} { return l.Biz })
+	blts[eq("addr")] = colFn(func(l *Log) interface{} { return l.IPAddr })
 
 	rsps[starts("head_")] = colVFn(func(l *Log, v string) interface{} { return At(l.RspHeader[v[5:]], 0) })
 	rsps[eq("heads")] = colVFn(func(l *Log, v string) interface{} { return fmt.Sprintf("%+v", l.RspHeader) })
@@ -131,10 +132,14 @@ func (s *TableCol) parseComment() {
 }
 
 func (s *TableCol) wrapMaxLength(col col) col {
+	// Caution: use temporary to store for later usage in function
+	// avoid directly use s.MaxLength in the following that will cause problems.
+	maxLength := s.MaxLength
+
 	return colFn(func(l *Log) interface{} {
 		v := col.get(l)
 
-		if v == nil || s.MaxLength <= 0 {
+		if v == nil || maxLength <= 0 {
 			return v
 		}
 
@@ -147,7 +152,7 @@ func (s *TableCol) wrapMaxLength(col col) col {
 			return v
 		}
 
-		return Abbreviate(fmt.Sprintf("%v", v), s.MaxLength)
+		return Abbreviate(fmt.Sprintf("%v", v), maxLength)
 	})
 }
 

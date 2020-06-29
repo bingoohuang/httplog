@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const maxSize = 1000
+const maxSize = 3000
 
 // Metrics holds metrics captured from CaptureMetrics.
 type Metrics struct {
