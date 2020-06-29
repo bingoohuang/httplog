@@ -38,8 +38,8 @@ func (s *SQLStore) loadTableSchema(tableName string) tableSchema {
 
 	run := NewSQLRun(s.DB, mapper)
 
-	tableCols := run.DoQuery(`select column_name, column_comment, data_type,
-		 character_maximum_length max_length, ordinal_position column_seq
+	tableCols := run.DoQuery(`
+		 select column_name, column_comment, data_type, character_maximum_length max_length
 		 from information_schema.columns
 		 where table_schema = database()
 		 and table_name = ?`, -1, tableName).Rows.([]TableCol)
@@ -62,7 +62,6 @@ type TableCol struct {
 	Comment   string `name:"column_comment"`
 	DataType  string `name:"data_type"`
 	MaxLength int    `name:"max_length"`
-	Seq       int    `name:"column_seq"`
 
 	ValueGetter col `name:"-"`
 }
@@ -87,6 +86,10 @@ type tableSchema struct {
 }
 
 func (t tableSchema) log(db MiniDB, l *Log) {
+	if len(t.ValueGetters) == 0 {
+		return
+	}
+
 	params := make([]interface{}, len(t.ValueGetters))
 	for i, vg := range t.ValueGetters {
 		params[i] = vg.get(l)
@@ -98,9 +101,16 @@ func (t tableSchema) log(db MiniDB, l *Log) {
 }
 
 func (t *tableSchema) createInsertSQL() {
-	getters := make([]col, 0, len(t.Cols))
-	columns := make([]string, 0, len(t.Cols))
-	marks := make([]string, 0, len(t.Cols))
+	colsNum := len(t.Cols)
+	if colsNum == 0 {
+		logrus.Warnf("table %s not found", t.Name)
+
+		return
+	}
+
+	getters := make([]col, 0, colsNum)
+	columns := make([]string, 0, colsNum)
+	marks := make([]string, 0, colsNum)
 
 	for _, c := range t.Cols {
 		c.parseComment()
