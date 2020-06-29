@@ -23,7 +23,7 @@ func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	l.PathParams = holder.params
 
 	l.ID = snow.Next().String()
-	l.Biz = l.Option.GetName()
+	l.Biz = l.Option.GetBiz()
 	l.Method = r.Method
 	l.URL = r.URL.String()
 	l.ReqHeader = r.Header
@@ -56,7 +56,6 @@ func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // HandlerFuncAware declares interface which holds  the HandleFunc function.
 type HandlerFuncAware interface {
-	// HandleFunc registers the handler function for the given pattern.
 	HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request))
 }
 
@@ -75,15 +74,15 @@ func (mux *Mux) HandleFunc(pattern string, handler func(http.ResponseWriter, *ht
 		v.HandleFunc(pattern, handler)
 	}
 
-	mux.registerRouter(AnyMethod, pattern, options)
+	mux.registerRouter(anyMethod, pattern, options)
 }
 
-// AnyMethod means any HTTP method.
-const AnyMethod = "ANY"
+// anyMethod means any HTTP method.
+const anyMethod = "ANY"
 
 // nolint:gochecknoglobals
 var (
-	AllHTTPMethods = []string{
+	allHTTPMethods = []string{
 		http.MethodGet,
 		http.MethodHead,
 		http.MethodPost,
@@ -112,8 +111,8 @@ func (mux *Mux) registerRouter(method, pattern string, options []OptionFn) {
 }
 
 func createMethods(method string) []string {
-	if method == AnyMethod {
-		return AllHTTPMethods
+	if method == anyMethod {
+		return allHTTPMethods
 	}
 
 	return []string{method}

@@ -13,10 +13,13 @@ import (
 // from https://github.com/essentialbooks/books/blob/master/code/go/logging_http_requests/main.go
 func ExampleNewServeMux() {
 	mux := httplog.NewMux(http.NewServeMux(), httplog.NewLogrusStore())
-	mux.HandleFunc("/echo", handleIndex, httplog.Name("回显处理"))
-	mux.HandleFunc("/json", handleJSON, httplog.Name("JSON处理"))
+	mux.HandleFunc("/echo", handleIndex, httplog.Biz("回显处理"))
+	mux.HandleFunc("/json", handleJSON, httplog.Biz("JSON处理"))
 	mux.HandleFunc("/ignored", handleIgnore, httplog.Ignore(true))
 	mux.HandleFunc("/noname", handleNoname)
+
+	//server := http.Server{Addr: ":8080", Handler: mux}
+	//log.Fatal(server.ListenAndServe())
 
 	r, _ := http.NewRequest("GET", "/json", nil)
 	r.Header.Set("Content-Type", "application/json")
@@ -59,8 +62,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK) // 200
 
-	attrs := httplog.ParseAttrs(r)
-	attrs["bytes"] = "xxx"
+	httplog.PutAttr(r, "xxx", "yyy")
 
 	var bytes []byte
 

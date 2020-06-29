@@ -11,8 +11,11 @@ import (
 func TestGin(t *testing.T) {
 	router := httplog.NewGin(gin.New(), httplog.NewLogrusStore())
 
-	router.GET("/hello/:name", ctler.Hello, httplog.Name("你好"))
+	router.GET("/hello/:name", ctler.Hello, httplog.Biz("你好"))
 	router.GET("/bypass/:name", ctler.Bypass, httplog.Ignore(true))
+
+	// 监听运行于 0.0.0.0:8080
+	//router.Run(":8080")
 
 	rr := httplog.PerformRequest("GET", "/hello/bingoo", router)
 	assert.Equal(t, 200, rr.Code)

@@ -9,10 +9,10 @@ import (
 )
 
 // NewGin wraps a new GinRouter for the gin router.
-func NewGin(router gin.IRouter, store Store) *GinRouter {
+func NewGin(router *gin.Engine, store Store) *GinRouter {
 	r := &GinRouter{
-		IRouter: router,
-		Mux:     NewMux(router.(http.Handler), store),
+		Engine: router,
+		mux:    NewMux(router, store),
 	}
 	fn := func(method string) RouterFn {
 		return func(relativePath string, handler gin.HandlerFunc, options ...OptionFn) *GinRouter {
@@ -36,8 +36,8 @@ type RouterFn func(relativePath string, handler gin.HandlerFunc, options ...Opti
 
 // GinRouter defines adaptor routes implementation for IRoutes.
 type GinRouter struct {
-	gin.IRouter
-	*Mux
+	*gin.Engine
+	mux *Mux
 
 	// XXX is a shortcut for router.Handle("XXX", path, handle).
 	POST, GET, DELETE, PATCH, PUT, OPTIONS, HEAD RouterFn
@@ -55,8 +55,8 @@ type GinRouter struct {
 // frequently used, non-standardized or custom methods (e.g. for internal
 // communication with a proxy).
 func (r *GinRouter) Handle(httpMethod, relativePath string, handler gin.HandlerFunc, options ...OptionFn) *GinRouter {
-	r.IRouter.Handle(httpMethod, relativePath, handler)
-	r.registerRouter(httpMethod, relativePath, options)
+	r.Engine.Handle(httpMethod, relativePath, handler)
+	r.mux.registerRouter(httpMethod, relativePath, options)
 
 	return r
 }
@@ -64,8 +64,8 @@ func (r *GinRouter) Handle(httpMethod, relativePath string, handler gin.HandlerF
 // Any registers a route that matches all the HTTP methods.
 // GET, POST, PUT, PATCH, HEAD, OPTIONS, DELETE, CONNECT, TRACE.
 func (r *GinRouter) Any(relativePath string, handler gin.HandlerFunc, options ...OptionFn) *GinRouter {
-	r.IRouter.Any(relativePath, handler)
-	r.registerRouter(AnyMethod, relativePath, options)
+	r.Engine.Any(relativePath, handler)
+	r.mux.registerRouter(anyMethod, relativePath, options)
 
 	return r
 }
@@ -98,9 +98,9 @@ func (r *GinRouter) RegisterCtler(ctler interface{}) {
 		}
 
 		fn := f.Interface().(gin.HandlerFunc)
-		options := []OptionFn{Name(fi.Tag.Get("name")), Ignore(fi.Tag.Get("ignore") == "true")}
+		options := []OptionFn{Biz(fi.Tag.Get("name")), Ignore(fi.Tag.Get("ignore") == "true")}
 
-		if method == AnyMethod {
+		if method == anyMethod {
 			r.Any(route, fn, options...)
 		} else {
 			r.Handle(method, route, fn, options...)

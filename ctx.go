@@ -41,6 +41,22 @@ func ParseAttrs(r *http.Request) Attrs {
 	return Attrs{}
 }
 
+// PutAttr put an attribute into the Attributes in the context.
+func PutAttr(r *http.Request, key string, value interface{}) {
+	if v, ok := r.Context().Value(CtxKey).(*CtxVar); ok {
+		v.Attrs[key] = value
+	}
+}
+
+// PutAttrMap put an attribute map into the Attributes in the context.
+func PutAttrMap(r *http.Request, attrs map[string]interface{}) {
+	if c, ok := r.Context().Value(CtxKey).(*CtxVar); ok {
+		for k, v := range attrs {
+			c.Attrs[k] = v
+		}
+	}
+}
+
 func createCtx(r *http.Request, ri *Log) (context.Context, *CtxVar) {
 	ctxVar := &CtxVar{Req: ri, Attrs: make(Attrs)}
 	newCtx := context.WithValue(r.Context(), CtxKey, ctxVar)

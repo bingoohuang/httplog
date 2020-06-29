@@ -20,7 +20,7 @@ func TestNewSQLStore(t *testing.T) {
 	store := httplog.NewSQLStore(db, "")
 
 	mux := httplog.NewMux(http.NewServeMux(), store)
-	mux.HandleFunc("/echo", handleIndex, httplog.Name("回显处理"), httplog.Tables("biz_log"))
+	mux.HandleFunc("/echo", handleIndex, httplog.Biz("回显处理"), httplog.Tables("biz_log"))
 
 	r, _ := http.NewRequest("GET", "/echo", nil)
 	r.Header.Set("Content-Type", "application/json")

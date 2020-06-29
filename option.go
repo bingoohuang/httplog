@@ -26,7 +26,7 @@ func (ho OptionHolder) WriteHeader(int) {}
 
 // Option defines the option for the handler in the httplog.
 type Option struct {
-	Name   string
+	Biz    string
 	Tables []string
 	Ignore bool
 }
@@ -45,10 +45,10 @@ func parseOption(r *http.Request, h http.Handler) *OptionHolder {
 	return kw
 }
 
-// GetName returns the name from the option.
-func (o Option) GetName() string {
-	if o.Name != "" {
-		return o.Name
+// GetBiz returns the name from the option.
+func (o Option) GetBiz() string {
+	if o.Biz != "" {
+		return o.Biz
 	}
 
 	return "Noname"
@@ -68,8 +68,8 @@ func (fns OptionFns) CreateOption() *Option {
 // OptionFn defines the option function prototype.
 type OptionFn func(option *Option)
 
-// Name defines the descriptive name of the handler.
-func Name(name string) OptionFn { return func(option *Option) { option.Name = name } }
+// Biz defines the descriptive name of the handler.
+func Biz(name string) OptionFn { return func(option *Option) { option.Biz = name } }
 
 // Tables defines the tables to saving log.
 func Tables(names ...string) OptionFn { return func(option *Option) { option.Tables = names } }
