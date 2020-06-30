@@ -42,7 +42,7 @@ func (s *SQLStore) loadTableSchema(tableName string) (*tableSchema, error) {
 		 select column_name, column_comment, data_type, character_maximum_length max_length
 		 from information_schema.columns
 		 where table_schema = database()
-		 and table_name = ?`, -1, tableName)
+		 and table_name = ?`, tableName)
 	if result.Error != nil {
 		return nil, result.Error
 	}
