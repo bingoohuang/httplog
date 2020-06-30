@@ -72,10 +72,10 @@ router.Run(":8080")
 `httplog:"addr"` |addr|http客户端地址
 `httplog:"hostname"` |hostname|当前机器名称
 `httplog:"pid"` |pid|应用程序PID
-`httplog:"started"` |start|开始时间(yyyy-MM-dd HH:mm:ss.SSS)
-`httplog:"end"` |end|结束时间(yyyy-MM-dd HH:mm:ss.SSS)
+`httplog:"started"` |start|开始时间
+`httplog:"end"` |end|结束时间
 `httplog:"cost"` |cost|花费时间（ms)
-`httplog:"biz"` |biz|业务名称，对应到HttpLog注解的biz
+`httplog:"biz"` |biz|业务名称，eg `httplog.Biz("项目列表")`
 请求类:||
 `httplog:"req_head_xxx"` |req_head_xxx|请求中的xxx头
 `httplog:"req_heads"` |req_heads|请求中的所有头
@@ -98,7 +98,7 @@ router.Run(":8080")
 `httplog:"rsp_json_xxx"`|rsp_json_xxx| 请求体JSON中的xxx属性
 `httplog:"rsp_status"`|rsp_status| 响应编码
 上下文:||
-`httplog:"ctx_xxx"` |ctx_xxx|上下文对象xxx的值, 通过api设置: `httplog.PutAttr(r, "xxx", "yyy")`
+`httplog:"ctx_xxx"` |ctx_xxx|上下文对象xxx的值, 通过api设置: `httplog.PutAttr(r, "xxx", "yyy")` 或者 `httplog.PutAttrMap(r, httplog.Attrs{"name": "alice", "female": true})`
 </details>
 
 ### Ctrler examples

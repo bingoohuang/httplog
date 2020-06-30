@@ -49,7 +49,7 @@ func PutAttr(r *http.Request, key string, value interface{}) {
 }
 
 // PutAttrMap put an attribute map into the Attributes in the context.
-func PutAttrMap(r *http.Request, attrs map[string]interface{}) {
+func PutAttrMap(r *http.Request, attrs Attrs) {
 	if c, ok := r.Context().Value(CtxKey).(*CtxVar); ok {
 		for k, v := range attrs {
 			c.Attrs[k] = v

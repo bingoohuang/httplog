@@ -63,6 +63,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK) // 200
 
 	httplog.PutAttr(r, "xxx", "yyy")
+	httplog.PutAttrMap(r, httplog.Attrs{"name": "alice", "female": true})
 
 	var bytes []byte
 
