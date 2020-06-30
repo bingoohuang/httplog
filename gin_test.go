@@ -22,6 +22,7 @@ func TestGin(t *testing.T) {
 
 	group.GET("/hello/:name", ctler.Hello, httplog.Biz("你好"))
 	group.GET("/bypass/:name", ctler.Bypass, httplog.Ignore(true))
+	group.GET("/bare", ctler.Bypass)
 
 	// 监听运行于 0.0.0.0:8080
 	//router.Run(":8080")
@@ -36,6 +37,8 @@ func TestGin(t *testing.T) {
 	rr = httplog.PerformRequest("GET", "/group/bypass/bingoo", router)
 	assert.Equal(t, 200, rr.Code)
 	assert.Equal(t, "welcome bingoo", rr.Body.String())
+
+	httplog.PerformRequest("GET", "/bare", router)
 }
 
 type Ctrler struct {

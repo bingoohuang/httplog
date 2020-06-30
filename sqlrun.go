@@ -14,6 +14,7 @@ type ExecResult struct {
 	Rows         interface{} // [][]string
 	RowsAffected int64
 	LastInsertID int64
+	IsQuery      bool
 }
 
 // MiniDB wraps Exec method.
@@ -33,6 +34,8 @@ type SQLExec struct {
 type SQLRun struct {
 	*SQLExec
 	Preparer // required only for query
+
+	MaxRows int
 }
 
 // NewSQLExec creates a new SQLExec for only updates.
@@ -41,30 +44,31 @@ func NewSQLExec(db MiniDB) *SQLExec {
 }
 
 // NewSQLRun creates a new SQLRun for queries and updates.
-func NewSQLRun(db MiniDB, mapper Preparer) *SQLRun {
-	return &SQLRun{Preparer: mapper, SQLExec: NewSQLExec(db)}
+func NewSQLRun(db MiniDB, preparer Preparer) *SQLRun {
+	return &SQLRun{Preparer: preparer, SQLExec: NewSQLExec(db)}
 }
 
 // DoExec executes a SQL.
-func (s *SQLRun) DoExec(sqlStr string, maxRows int, vars ...interface{}) ExecResult {
-	_, isQuerySQL := IsQuerySQL(sqlStr)
+func (s *SQLRun) DoExec(query string, args ...interface{}) ExecResult {
+	_, isQuerySQL := IsQuerySQL(query)
 
 	if isQuerySQL {
-		return s.DoQuery(sqlStr, maxRows, vars...)
+		return s.DoQuery(query, args...)
 	}
 
-	return s.DoUpdate(sqlStr, vars...)
+	return s.DoUpdate(query, args...)
 }
 
 // DoQuery does the query.
-func (s *SQLRun) DoQuery(sqlStr string, maxRows int, vars ...interface{}) (result ExecResult) {
+func (s *SQLRun) DoQuery(query string, args ...interface{}) (result ExecResult) {
 	start := time.Now()
+	result.IsQuery = true
 
 	defer func() {
 		result.CostTime = time.Since(start)
 	}()
 
-	rows, err := s.Query(sqlStr, vars...)
+	rows, err := s.Query(query, args...)
 	if err != nil || rows != nil && rows.Err() != nil {
 		if err == nil {
 			err = rows.Err()
@@ -84,8 +88,8 @@ func (s *SQLRun) DoQuery(sqlStr string, maxRows int, vars ...interface{}) (resul
 
 	mapping := s.Preparer.Prepare(rows, columns)
 
-	for row := 0; rows.Next() && (maxRows <= 0 || row < maxRows); row++ {
-		if err := mapping.Scan(); err != nil {
+	for r := 0; rows.Next() && (s.MaxRows <= 0 || r < s.MaxRows); r++ {
+		if err := mapping.Scan(r); err != nil {
 			result.Error = err
 
 			return result
@@ -100,9 +104,9 @@ func (s *SQLRun) DoQuery(sqlStr string, maxRows int, vars ...interface{}) (resul
 }
 
 // DoUpdate does the update.
-func (s *SQLExec) DoUpdate(sqlStr string, vars ...interface{}) (result ExecResult) {
+func (s *SQLExec) DoUpdate(query string, vars ...interface{}) (result ExecResult) {
 	start := time.Now()
-	r, err := s.Exec(sqlStr, vars...)
+	r, err := s.Exec(query, vars...)
 
 	if r != nil {
 		result.RowsAffected, _ = r.RowsAffected()

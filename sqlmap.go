@@ -27,7 +27,7 @@ func (s *structItem) SetField(val reflect.Value) {
 
 // Mapping defines the interface for SQL query processing.
 type Mapping interface {
-	Scan() error
+	Scan(rowNum int) error
 	RowsData() interface{}
 }
 
@@ -45,7 +45,7 @@ type MapMapping struct {
 func (m *MapMapping) RowsData() interface{} { return m.rowsData }
 
 // Scan scans the rows one by one.
-func (m *MapMapping) Scan() error {
+func (m *MapMapping) Scan(rowNum int) error {
 	holders := make([]sql.NullString, m.columnSize)
 	pointers := make([]interface{}, m.columnSize)
 
@@ -119,7 +119,7 @@ type StructMapping struct {
 }
 
 // Scan scans the query result to fetch the rows one by one.
-func (s *StructMapping) Scan() error {
+func (s *StructMapping) Scan(rowNum int) error {
 	pointers, structPtr := s.mapFields.ResetDestinations(s.StructMapper)
 
 	err := s.rows.Scan(pointers...)

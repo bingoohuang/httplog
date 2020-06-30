@@ -113,7 +113,7 @@ func (s *Stores) Store(log *Log) {
 	}
 }
 
-// NewStores composes the stores as a Store
+// NewStores composes the stores as a Store.
 func NewStores(stores ...Store) *Stores {
 	return &Stores{Composite: stores}
 }
