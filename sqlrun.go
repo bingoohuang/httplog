@@ -69,6 +69,10 @@ func (s *SQLRun) DoQuery(query string, args ...interface{}) (result ExecResult) 
 	}()
 
 	rows, err := s.Query(query, args...)
+	if rows != nil {
+		defer rows.Close()
+	}
+
 	if err != nil || rows != nil && rows.Err() != nil {
 		if err == nil {
 			err = rows.Err()
@@ -78,8 +82,6 @@ func (s *SQLRun) DoQuery(query string, args ...interface{}) (result ExecResult) 
 
 		return result
 	}
-
-	defer rows.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
