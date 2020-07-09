@@ -79,6 +79,8 @@ func (s *SQLRun) DoQuery(query string, args ...interface{}) (result ExecResult) 
 		return result
 	}
 
+	defer rows.Close()
+
 	columns, err := rows.Columns()
 	if err != nil {
 		result.Error = err
