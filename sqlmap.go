@@ -85,6 +85,13 @@ type MapPreparer struct {
 	NullReplace string
 }
 
+// NewMapPreparer creates a new MapPreparer.
+func NewMapPreparer(nullReplace string) *MapPreparer {
+	return &MapPreparer{
+		NullReplace: nullReplace,
+	}
+}
+
 // Prepare prepares to scan query rows.
 func (m *MapPreparer) Prepare(rows *sql.Rows, columns []string) Mapping {
 	columnSize := len(columns)
@@ -105,22 +112,38 @@ func (m *MapPreparer) Prepare(rows *sql.Rows, columns []string) Mapping {
 	}
 }
 
-// StructMapper is the the structure to create struct mapping.
-type StructMapper struct {
+// StructPreparer is the the structure to create struct mapping.
+type StructPreparer struct {
 	StructType reflect.Type
+}
+
+// NewStructPreparer creates a new StructPreparer.
+func NewStructPreparer(v interface{}) *StructPreparer {
+	t := reflect.TypeOf(v)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	if t.Kind() != reflect.Struct {
+		panic(t.String() + " hasn't' not a struct or pointer to ptr type")
+	}
+
+	return &StructPreparer{
+		StructType: t,
+	}
 }
 
 // StructMapping is the structure for mapping row to a structure.
 type StructMapping struct {
 	mapFields selectItemSlice
-	*StructMapper
+	*StructPreparer
 	rows     *sql.Rows
 	rowsData reflect.Value
 }
 
 // Scan scans the query result to fetch the rows one by one.
 func (s *StructMapping) Scan(rowNum int) error {
-	pointers, structPtr := s.mapFields.ResetDestinations(s.StructMapper)
+	pointers, structPtr := s.mapFields.ResetDestinations(s.StructPreparer)
 
 	err := s.rows.Scan(pointers...)
 	if err != nil {
@@ -144,16 +167,16 @@ func (s *StructMapping) Scan(rowNum int) error {
 func (s *StructMapping) RowsData() interface{} { return s.rowsData.Interface() }
 
 // Prepare prepares to scan query rows.
-func (m *StructMapper) Prepare(rows *sql.Rows, columns []string) Mapping {
+func (m *StructPreparer) Prepare(rows *sql.Rows, columns []string) Mapping {
 	return &StructMapping{
-		rows:         rows,
-		mapFields:    m.newStructFields(columns),
-		StructMapper: m,
-		rowsData:     reflect.MakeSlice(reflect.SliceOf(m.StructType), 0, 0),
+		rows:           rows,
+		mapFields:      m.newStructFields(columns),
+		StructPreparer: m,
+		rowsData:       reflect.MakeSlice(reflect.SliceOf(m.StructType), 0, 0),
 	}
 }
 
-func (mapFields selectItemSlice) ResetDestinations(mapper *StructMapper) ([]interface{}, reflect.Value) {
+func (mapFields selectItemSlice) ResetDestinations(mapper *StructPreparer) ([]interface{}, reflect.Value) {
 	pointers := make([]interface{}, len(mapFields))
 	structPtr := reflect.New(mapper.StructType)
 
@@ -199,7 +222,7 @@ func ImplSQLScanner(t reflect.Type) bool { return ImplType(t, _sqlScannerType) }
 type selectItemSlice []selectItem
 
 // newStructFields creates new struct fields slice.
-func (m *StructMapper) newStructFields(columns []string) selectItemSlice {
+func (m *StructPreparer) newStructFields(columns []string) selectItemSlice {
 	mapFields := make(selectItemSlice, len(columns))
 	for i, col := range columns {
 		mapFields[i] = m.newStructField(col)
@@ -209,7 +232,7 @@ func (m *StructMapper) newStructFields(columns []string) selectItemSlice {
 }
 
 // newStructField creates a new struct field.
-func (m StructMapper) newStructField(col string) selectItem {
+func (m StructPreparer) newStructField(col string) selectItem {
 	fv, ok := m.StructType.FieldByNameFunc(func(field string) bool {
 		return m.matchesField2Col(field, col)
 	})
@@ -221,7 +244,7 @@ func (m StructMapper) newStructField(col string) selectItem {
 	return nil
 }
 
-func (m StructMapper) matchesField2Col(field, col string) bool {
+func (m StructPreparer) matchesField2Col(field, col string) bool {
 	f, _ := m.StructType.FieldByName(field)
 	if v := f.Tag.Get("name"); v != "" && v != "-" {
 		return v == col

@@ -8,13 +8,20 @@ import (
 
 // ExecResult defines the result structure of sql execution.
 type ExecResult struct {
-	Error        error
-	CostTime     time.Duration
-	Headers      []string
-	Rows         interface{} // [][]string
+	Error     error
+	CostTime  time.Duration
+	Headers   []string
+	Rows      interface{} // [][]string or []YourStruct
+	RowsCount int
+
 	RowsAffected int64
 	LastInsertID int64
 	IsQuery      bool
+}
+
+// StringRows return the string rows when using MapPreparer.
+func (r ExecResult) StringRows() [][]string {
+	return r.Rows.([][]string)
 }
 
 // MiniDB wraps Exec method.
@@ -92,7 +99,8 @@ func (s *SQLRun) DoQuery(query string, args ...interface{}) (result ExecResult) 
 
 	mapping := s.Preparer.Prepare(rows, columns)
 
-	for r := 0; rows.Next() && (s.MaxRows <= 0 || r < s.MaxRows); r++ {
+	r := 0
+	for ; rows.Next() && (s.MaxRows <= 0 || r < s.MaxRows); r++ {
 		if err := mapping.Scan(r); err != nil {
 			result.Error = err
 
@@ -103,6 +111,7 @@ func (s *SQLRun) DoQuery(query string, args ...interface{}) (result ExecResult) 
 	result.Error = err
 	result.Headers = columns
 	result.Rows = mapping.RowsData()
+	result.RowsCount = r
 
 	return result
 }

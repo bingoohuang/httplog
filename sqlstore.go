@@ -2,7 +2,6 @@ package httplog
 
 import (
 	"database/sql"
-	"reflect"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -32,10 +31,7 @@ func (s *SQLStore) loadTableSchema(tableName string) (*tableSchema, error) {
 		return v, nil
 	}
 
-	mapper := &StructMapper{
-		StructType: reflect.TypeOf((*TableCol)(nil)).Elem(),
-	}
-
+	mapper := NewStructPreparer(TableCol{})
 	run := NewSQLRun(s.DB, mapper)
 
 	result := run.DoQuery(`
