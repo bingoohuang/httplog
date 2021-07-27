@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/bingoohuang/ip"
+	"github.com/bingoohuang/goip"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spyzhov/ajson"
@@ -73,7 +73,7 @@ func jsonpath(expr, body string) string {
 func init() {
 	blts[eq("id")] = colFn(func(l *Log) interface{} { return l.ID })
 	blts[eq("created")] = colFn(func(l *Log) interface{} { return l.Created })
-	blts[eq("ip")] = colFn(func(l *Log) interface{} { v, _ := ip.MainIP(); return v })
+	blts[eq("ip")] = colFn(func(l *Log) interface{} { v, _ := goip.MainIP(); return v })
 	blts[eq("hostname")] = colFn(func(l *Log) interface{} { v, _ := os.Hostname(); return v })
 	blts[eq("pid")] = colFn(func(l *Log) interface{} { return os.Getpid() })
 	blts[eq("started")] = colFn(func(l *Log) interface{} { return l.Start })

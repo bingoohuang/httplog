@@ -20,7 +20,7 @@ type Mux struct {
 // ServeHTTP calls f(w, r).
 func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	l := &Log{Created: time.Now()}
-	holder := parseOption(r, mux)
+	holder := mux.ParseOption(r)
 
 	l.Option = holder.option
 	l.PathParams = holder.params
